@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flappy Head</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      background: linear-gradient(#87CEEB, #ffffff);
+    }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const gravity = 0.5;
+  const jump = -10;
+  const pipeGap = 200;
+  const pipeWidth = 80;
+  const pipeSpeed = 3;
+
+  const HEAD_SIZE = 60; // draw smaller than source image (120x120)
+
+  let head = {
+    x: 150,
+    y: canvas.height / 2,
+    velocity: 0,
+    expression: "neutral",
+    frameSmile: 0
+  };
+
+  let headImages = {
+    neutral: new Image(),
+    happy: new Image(),
+    sad: new Image()
+  };
+
+  headImages.neutral.src = "neutral.png";
+  headImages.happy.src = "happy.png";
+  headImages.sad.src = "sad.png";
+
+  let pipes = [];
+  let frame = 0;
+
+  function drawHead() {
+    const img = headImages[head.expression];
+    ctx.drawImage(img, head.x - HEAD_SIZE / 2, head.y - HEAD_SIZE / 2, HEAD_SIZE, HEAD_SIZE);
+  }
+
+  function drawPipes() {
+    pipes.forEach(pipe => {
+      ctx.fillStyle = "#654321";
+      ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+      ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, canvas.height - pipe.bottom);
+    });
+  }
+
+  function update() {
+    frame++;
+    head.velocity += gravity;
+    head.y += head.velocity;
+
+    if (frame % 90 === 0) {
+      const top = Math.random() * (canvas.height - pipeGap - 100) + 50;
+      pipes.push({
+        x: canvas.width,
+        top: top,
+        bottom: top + pipeGap
+      });
+    }
+
+    pipes.forEach(pipe => {
+      pipe.x -= pipeSpeed;
+    });
+
+    pipes = pipes.filter(pipe => pipe.x + pipeWidth > 0);
+
+    for (let pipe of pipes) {
+      if (
+        head.x + HEAD_SIZE / 2 > pipe.x &&
+        head.x - HEAD_SIZE / 2 < pipe.x + pipeWidth &&
+        (head.y - HEAD_SIZE / 2 < pipe.top || head.y + HEAD_SIZE / 2 > pipe.bottom)
+      ) {
+        head.expression = "sad";
+        reset(true);
+      }
+    }
+
+    if (head.y + HEAD_SIZE / 2 > canvas.height || head.y - HEAD_SIZE / 2 < 0) {
+      head.expression = "sad";
+      reset(true);
+    }
+
+    if (head.frameSmile > 0) head.frameSmile--;
+    if (head.frameSmile === 0 && head.expression !== "sad") {
+      head.expression = "neutral";
+    }
+  }
+
+  function reset(skipReset = false) {
+    if (!skipReset) {
+      head.y = canvas.height / 2;
+      head.velocity = 0;
+      pipes = [];
+      frame = 0;
+      head.expression = "neutral";
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawHead();
+    drawPipes();
+  }
+
+  function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+  }
+
+  canvas.addEventListener("mousedown", () => {
+    if (head.expression === "sad") {
+      reset();
+      return;
+    }
+    head.velocity = jump;
+    head.expression = "happy";
+    head.frameSmile = 20;
+  });
+
+  gameLoop();
+</script>
+</body>
+</html>
+
